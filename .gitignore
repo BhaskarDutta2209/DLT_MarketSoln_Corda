@@ -75,3 +75,6 @@ docs/virtualenv/
 
 # if you use the installQuasar task
 lib
+
+#Temp file
+./temp.txt

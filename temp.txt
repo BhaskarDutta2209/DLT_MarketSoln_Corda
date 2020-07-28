@@ -1,0 +1,17 @@
+Creating Demo Shop Account:
+flow start CreateNewAccount accountName: DemoShop, shareWith: [PartyB]
+
+Adding Demo product:
+flow start AddItem key: e52232e1-0ded-4587-999f-4dd135a4a94f, productName: Demo, productDetails: This is a demo product, barCode: 789-789-789-789, shopAccountName: DemoShop
+
+Vault Query for Item State:
+run vaultQuery contractStateType: com.template.states.ItemState
+
+Adding Demo Buyer Account:
+flow start CreateNewAccount accountName: DemoBuyer, shareWith: [PartyA]
+
+Placing Demo Order:
+flow start PlaceOrder key: e52232e1-0ded-4587-999f-4dd135a4a94f, buyerAccountName: DemoBuyer, shopAccountName: DemoShop, deliveryAddress: DemoAddress
+
+RequestDeliver:
+flow start RequestDelivery trackingId: 10d7feaf-52c2-4b00-8053-83463021496f, sender: DemoShop, receiver: Delivery
