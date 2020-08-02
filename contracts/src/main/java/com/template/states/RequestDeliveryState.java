@@ -1,9 +1,7 @@
 package com.template.states;
 
 import com.template.contracts.RequestDeliveryContract;
-import com.template.contracts.TemplateContract;
 import net.corda.core.contracts.BelongsToContract;
-import net.corda.core.contracts.ContractState;
 import net.corda.core.contracts.LinearState;
 import net.corda.core.contracts.UniqueIdentifier;
 import net.corda.core.identity.AbstractParty;
@@ -21,6 +19,8 @@ import java.util.UUID;
 public class RequestDeliveryState implements LinearState {
 
     private final UniqueIdentifier linearId; //This is the order id
+    private final UUID productKey;
+    private final UniqueIdentifier productId;
     private final UUID uid;
     private final String shopAccountName;
     private final String buyerAccountName;
@@ -29,8 +29,10 @@ public class RequestDeliveryState implements LinearState {
     private final AnonymousParty sender;
     private final AnonymousParty receiver;
 
-    public RequestDeliveryState(UniqueIdentifier linearId, UUID uid, String shopAccountName, String buyerAccountName, String buyerAddress, AnonymousParty sender, AnonymousParty receiver) {
+    public RequestDeliveryState(UniqueIdentifier linearId, UUID productKey, UniqueIdentifier productId, UUID uid, String shopAccountName, String buyerAccountName, String buyerAddress, AnonymousParty sender, AnonymousParty receiver) {
         this.linearId = linearId;
+        this.productKey = productKey;
+        this.productId = productId;
         this.uid = uid;
         this.shopAccountName = shopAccountName;
 
@@ -54,6 +56,14 @@ public class RequestDeliveryState implements LinearState {
 
     public UUID getUid() {
         return uid;
+    }
+
+    public UUID getProductKey() {
+        return productKey;
+    }
+
+    public UniqueIdentifier getProductId() {
+        return productId;
     }
 
     public String getShopAccountName() {

@@ -1,14 +1,20 @@
 Creating Demo Shop Account:
-flow start CreateNewAccount accountName: DemoShop, shareWith: [PartyB]
+flow start CreateNewAccount accountName: DemoShop, shareWith: [Delivery,Buyer]
 
 Adding Demo product:
 flow start AddItem key: e52232e1-0ded-4587-999f-4dd135a4a94f, productName: Demo, productDetails: This is a demo product, barCode: 789-789-789-789, shopAccountName: DemoShop
+
+Adding Delivery named account:
+flow start CreateNewAccount accountName: Delivery, shareWith: [Shop,Buyer]
+
+Adding DemoGuy account as demo delivery person:
+flow start CreateNewAccount accountName: DemoGuy, shareWith: [Shop,Buyer]
 
 Vault Query for Item State:
 run vaultQuery contractStateType: com.template.states.ItemState
 
 Adding Demo Buyer Account:
-flow start CreateNewAccount accountName: DemoBuyer, shareWith: [PartyA]
+flow start CreateNewAccount accountName: DemoBuyer, shareWith: [Shop,Delivery]
 
 Placing Demo Order:
 flow start PlaceOrder key: e52232e1-0ded-4587-999f-4dd135a4a94f, buyerAccountName: DemoBuyer, shopAccountName: DemoShop, deliveryAddress: DemoAddress

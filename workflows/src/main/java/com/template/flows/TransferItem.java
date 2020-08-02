@@ -5,10 +5,10 @@ import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.r3.corda.lib.accounts.workflows.UtilitiesKt;
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount;
 import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts;
-import com.template.contracts.RequestDeliveryContract;
+import com.template.contracts.DeliveryRespondeContract;
+import com.template.contracts.ItemContract;
+import com.template.states.DeliveryRespondState;
 import com.template.states.ItemState;
-import com.template.states.OrderState;
-import com.template.states.RequestDeliveryState;
 import net.corda.core.contracts.Command;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.contracts.UniqueIdentifier;
@@ -31,101 +31,111 @@ import java.util.UUID;
 // ******************
 @InitiatingFlow
 @StartableByRPC
-public class RequestDelivery extends FlowLogic<String> {
-
+@StartableByService
+public class TransferItem extends FlowLogic<String> {
     private final UUID trackingId;
-
+    private final UUID productKey;
     private final String sender;
     private final String receiver;
 
-    public RequestDelivery(UUID trackingId, String sender, String receiver) {
+    public TransferItem(UUID trackingId, UUID productKey, String sender, String receiver) {
         this.trackingId = trackingId;
+        this.productKey = productKey;
         this.sender = sender;
         this.receiver = receiver;
     }
 
-    private StateAndRef<OrderState> findAssociatedOrderState(UniqueIdentifier linearId) {
+    private StateAndRef<ItemState> findItemState(UniqueIdentifier linearId) {
         QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
                 null,
                 Collections.singletonList(linearId),
                 Vault.StateStatus.UNCONSUMED,
                 null
         );
-        StateAndRef<OrderState> orderState = getServiceHub().getVaultService().queryBy(OrderState.class,criteria).getStates().get(0);
-        return orderState;
+        StateAndRef<ItemState> itemStateStateAndRef = getServiceHub().getVaultService().queryBy(ItemState.class,criteria).getStates().get(0);
+        return itemStateStateAndRef;
     }
 
-    private StateAndRef<ItemState> findAssociatedItemState(UniqueIdentifier linearId) {
+    private StateAndRef<DeliveryRespondState> findDeliveryRespondState(UniqueIdentifier linearId) {
         QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
                 null,
                 Collections.singletonList(linearId),
                 Vault.StateStatus.UNCONSUMED,
                 null
         );
-        StateAndRef<ItemState> itemState = getServiceHub().getVaultService().queryBy(ItemState.class,criteria).getStates().get(0);
-        return itemState;
+        StateAndRef<DeliveryRespondState> deliveryRespondStateStateAndRef = getServiceHub().getVaultService().queryBy(DeliveryRespondState.class,criteria).getStates().get(0);
+        return deliveryRespondStateStateAndRef;
     }
 
     @Suspendable
     @Override
     public String call() throws FlowException {
         // Initiator flow logic goes here.
-        UniqueIdentifier linearId = new UniqueIdentifier(null,trackingId);
 
         AccountInfo senderAccountInfo = UtilitiesKt.getAccountService(this).accountInfo(sender).get(0).getState().getData();
-        AnonymousParty senderParty = subFlow(new RequestKeyForAccount(senderAccountInfo));
         AccountInfo receiverAccountInfo = UtilitiesKt.getAccountService(this).accountInfo(receiver).get(0).getState().getData();
+
+        AnonymousParty senderParty = subFlow(new RequestKeyForAccount(senderAccountInfo));
         AnonymousParty receiverParty = subFlow(new RequestKeyForAccount(receiverAccountInfo));
 
         FlowSession receiverSession = initiateFlow(receiverAccountInfo.getHost());
 
-        StateAndRef<OrderState> associatedOrder = findAssociatedOrderState(linearId);
-        StateAndRef<ItemState> associatedItem = findAssociatedItemState(associatedOrder.getState().getData().getProductKey());
-        RequestDeliveryState outputState = new RequestDeliveryState(linearId,
-                associatedItem.getState().getData().getLinearId().getId(),
-                associatedItem.getState().getData().getProductId(),
-                associatedItem.getState().getData().getProductId().getId(),
-                associatedOrder.getState().getData().getShopAccountName(),
-                associatedOrder.getState().getData().getUserAccountName(),
-                associatedOrder.getState().getData().getDeliveryAddress(),
-                senderParty,receiverParty);
-
-        Command command = new Command(new RequestDeliveryContract.Issue(), Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
-
         Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+
+        UniqueIdentifier linearId = new UniqueIdentifier(null,productKey);
+        UniqueIdentifier trackingLinearId = new UniqueIdentifier(null, trackingId);
+
+        StateAndRef<ItemState> itemStateStateAndRef = findItemState(linearId);
+        StateAndRef<DeliveryRespondState> deliveryRespondStateStateAndRef = findDeliveryRespondState(trackingLinearId);
+
+        ItemState outputState = new ItemState(linearId,
+                itemStateStateAndRef.getState().getData().getProductId(),
+                itemStateStateAndRef.getState().getData().getProductName(),
+                itemStateStateAndRef.getState().getData().getProductDetails(),
+                itemStateStateAndRef.getState().getData().getShopAccountName(),
+                receiverParty);
+
+        Command itemCommand = new Command(new ItemContract.Transfer(), Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
+        Command deliveryRespondCommand = new Command(new DeliveryRespondeContract.Consume(),Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
 
         TransactionBuilder txB = new TransactionBuilder(notary)
                 .addOutputState(outputState)
-                .addCommand(command);
+                .addInputState(itemStateStateAndRef)
+                .addInputState(deliveryRespondStateStateAndRef)
+                .addCommand(itemCommand)
+                .addCommand(deliveryRespondCommand);
 
         txB.verify(getServiceHub());
 
         SignedTransaction selfSignedTx = getServiceHub().signInitialTransaction(txB,senderParty.getOwningKey());
         final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(selfSignedTx,
-                Arrays.asList(receiverSession), Collections.singleton(senderParty.getOwningKey())));
+                Arrays.asList(receiverSession),Collections.singletonList(senderParty.getOwningKey())));
 
         SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession)));
 
-        //Searching the created output state and calling ShareStateAndSyncAccounts flow
-        QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
-                null,
-                Collections.singletonList(linearId),
-                Vault.StateStatus.UNCONSUMED,
-                null
-        );
-        List<StateAndRef<RequestDeliveryState>> requestDeliveryStates = getServiceHub().getVaultService().queryBy(RequestDeliveryState.class,criteria).getStates();
-        subFlow(new ShareStateAndSyncAccounts(requestDeliveryStates.get(0),receiverAccountInfo.getHost()));
+        //The below share is not used because there is only one owner
 
-        return "Request send with id " + stx.getId();
+//        //Searching the created output state and calling ShareStateAndSyncAccounts flow
+//
+//        QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
+//                null,
+//                Collections.singletonList(linearId),
+//                Vault.StateStatus.UNCONSUMED,
+//                null
+//        );
+//        StateAndRef<ItemState> itemState = getServiceHub().getVaultService().queryBy(ItemState.class,criteria).getStates().get(0);
+//        subFlow(new ShareStateAndSyncAccounts(itemState,receiverAccountInfo.getHost()));
+
+        return "Success with id: " + stx.toString();
     }
 }
 
-@InitiatedBy(RequestDelivery.class)
-class RequestDeliveryResponder extends FlowLogic<String> {
+@InitiatedBy(TransferItem.class)
+class TransferItemResponder extends FlowLogic<String> {
 
     private FlowSession counterpartySession;
 
-    public RequestDeliveryResponder(FlowSession counterpartySession) {
+    public TransferItemResponder(FlowSession counterpartySession) {
         this.counterpartySession = counterpartySession;
     }
 
