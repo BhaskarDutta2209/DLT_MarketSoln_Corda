@@ -6,9 +6,13 @@ import com.r3.corda.lib.accounts.workflows.UtilitiesKt;
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount;
 import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts;
 import com.template.contracts.DeliveryRespondeContract;
+import com.template.contracts.HandOverRequestContract;
 import com.template.contracts.ItemContract;
+import com.template.contracts.OrderContract;
 import com.template.states.DeliveryRespondState;
+import com.template.states.HandOverRequestState;
 import com.template.states.ItemState;
+import com.template.states.OrderState;
 import net.corda.core.contracts.Command;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.contracts.UniqueIdentifier;
@@ -67,6 +71,17 @@ public class TransferItem extends FlowLogic<String> {
         return deliveryRespondStateStateAndRef;
     }
 
+    private StateAndRef<OrderState> findOrderState(UniqueIdentifier linearId) {
+        QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
+                null,
+                Collections.singletonList(linearId),
+                Vault.StateStatus.UNCONSUMED,
+                null
+        );
+        StateAndRef<OrderState> orderStateStateAndRef = getServiceHub().getVaultService().queryBy(OrderState.class,criteria).getStates().get(0);
+        return orderStateStateAndRef;
+    }
+
     @Suspendable
     @Override
     public String call() throws FlowException {
@@ -87,6 +102,12 @@ public class TransferItem extends FlowLogic<String> {
 
         StateAndRef<ItemState> itemStateStateAndRef = findItemState(linearId);
         StateAndRef<DeliveryRespondState> deliveryRespondStateStateAndRef = findDeliveryRespondState(trackingLinearId);
+        StateAndRef<OrderState> orderStateStateAndRef = findOrderState(trackingLinearId);
+
+        String buyerAccountName = orderStateStateAndRef.getState().getData().getUserAccountName();
+        AccountInfo buyerAccountInfo = UtilitiesKt.getAccountService(this).accountInfo(buyerAccountName).get(0).getState().getData();
+        AnonymousParty buyerParty = subFlow(new RequestKeyForAccount(buyerAccountInfo));
+        FlowSession buyerSession = initiateFlow(buyerAccountInfo.getHost());
 
         ItemState outputState = new ItemState(linearId,
                 itemStateStateAndRef.getState().getData().getProductId(),
@@ -95,23 +116,34 @@ public class TransferItem extends FlowLogic<String> {
                 itemStateStateAndRef.getState().getData().getShopAccountName(),
                 receiverParty);
 
+        HandOverRequestState handoverOutputState = new HandOverRequestState(trackingLinearId,productKey,sender,receiver,
+                orderStateStateAndRef.getState().getData().getUserAccountName(),
+                orderStateStateAndRef.getState().getData().getDeliveryAddress(),
+                receiverParty);
+
         Command itemCommand = new Command(new ItemContract.Transfer(), Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
         Command deliveryRespondCommand = new Command(new DeliveryRespondeContract.Consume(),Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
+        Command handOverRequestCommand = new Command(new HandOverRequestContract.Generate(),Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
+        Command orderCommand = new Command(new OrderContract.Consume(),Arrays.asList(senderParty.getOwningKey(),buyerParty.getOwningKey()));
 
         TransactionBuilder txB = new TransactionBuilder(notary)
                 .addOutputState(outputState)
+                .addOutputState(handoverOutputState)
                 .addInputState(itemStateStateAndRef)
                 .addInputState(deliveryRespondStateStateAndRef)
+                .addInputState(orderStateStateAndRef)
                 .addCommand(itemCommand)
+                .addCommand(orderCommand)
+                .addCommand(handOverRequestCommand)
                 .addCommand(deliveryRespondCommand);
 
         txB.verify(getServiceHub());
 
         SignedTransaction selfSignedTx = getServiceHub().signInitialTransaction(txB,senderParty.getOwningKey());
         final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(selfSignedTx,
-                Arrays.asList(receiverSession),Collections.singletonList(senderParty.getOwningKey())));
+                Arrays.asList(receiverSession,buyerSession),Collections.singletonList(senderParty.getOwningKey())));
 
-        SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession)));
+        SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession,buyerSession)));
 
         //The below share is not used because there is only one owner
 
