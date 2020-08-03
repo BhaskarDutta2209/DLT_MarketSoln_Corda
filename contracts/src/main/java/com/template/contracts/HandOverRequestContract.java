@@ -18,5 +18,5 @@ public class HandOverRequestContract implements Contract {
 
     // Used to indicate the transaction's intent.
     public static class Generate implements CommandData {}
-//    public static class Consume implements CommandData {}
+    public static class Consume implements CommandData {}
 }
