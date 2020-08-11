@@ -87,7 +87,10 @@ public class HandoverItem extends FlowLogic<String> {
         ItemState outputItemState = new ItemState(productKeyLinearId,
                 inputItem.getState().getData().getProductId(),
                 inputItem.getState().getData().getProductName(),
+                inputItem.getState().getData().getExpiryDate(),
+                inputItem.getState().getData().getQuantity(),
                 inputItem.getState().getData().getProductDetails(),
+                inputItem.getState().getData().getPrice(),
                 inputItem.getState().getData().getShopAccountName(),
                 receiverParty);
 

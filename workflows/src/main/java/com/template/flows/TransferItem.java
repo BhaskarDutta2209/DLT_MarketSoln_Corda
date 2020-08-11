@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.r3.corda.lib.accounts.workflows.UtilitiesKt;
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount;
-import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts;
 import com.template.contracts.DeliveryRespondeContract;
 import com.template.contracts.HandOverRequestContract;
 import com.template.contracts.ItemContract;
@@ -27,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 // ******************
@@ -112,7 +110,10 @@ public class TransferItem extends FlowLogic<String> {
         ItemState outputState = new ItemState(linearId,
                 itemStateStateAndRef.getState().getData().getProductId(),
                 itemStateStateAndRef.getState().getData().getProductName(),
+                itemStateStateAndRef.getState().getData().getExpiryDate(),
+                itemStateStateAndRef.getState().getData().getQuantity(),
                 itemStateStateAndRef.getState().getData().getProductDetails(),
+                itemStateStateAndRef.getState().getData().getPrice(),
                 itemStateStateAndRef.getState().getData().getShopAccountName(),
                 receiverParty);
 

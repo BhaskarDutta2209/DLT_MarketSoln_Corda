@@ -39,7 +39,8 @@ public class CreateNewAccount extends FlowLogic<String> {
             subFlow(new ShareAccountInfo(accountInfoStateAndRef, shareWith));
             return accountInfoStateAndRef.getState().getData().getIdentifier().toString();
         } catch (Exception exp) {
-            return "Creation failed with error: " + exp.getMessage();
+//            return "Creation failed with error: " + exp.getMessage();
+            return "Creation Failed";
         }
     }
 }

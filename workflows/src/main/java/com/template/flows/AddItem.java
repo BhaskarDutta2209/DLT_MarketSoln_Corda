@@ -27,13 +27,19 @@ public class AddItem extends FlowLogic<Void> {
     private final UUID key;
     private final String productName;
     private final String productDetails;
+    private final double price;
+    private final String expiryDate;
+    private final int quantity;
     private final String barCode;
     private final String shopAccountName;
 
-    public AddItem(UUID key, String productName, String productDetails, String barCode, String shopAccountName) {
+    public AddItem(UUID key, String productName, String productDetails, double price, String expiryDate, int quantity, String barCode, String shopAccountName) {
         this.key = key;
         this.productName = productName;
         this.productDetails = productDetails;
+        this.price = price;
+        this.expiryDate = expiryDate;
+        this.quantity = quantity;
         this.barCode = barCode;
         this.shopAccountName = shopAccountName;
     }
@@ -50,7 +56,7 @@ public class AddItem extends FlowLogic<Void> {
         AnonymousParty shopParty = subFlow(new RequestKeyForAccount(shopAccount));
 
         Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
-        ItemState outputState = new ItemState(linearId,productId,productName,productDetails,shopAccountName,shopParty);
+        ItemState outputState = new ItemState(linearId,productId,productName, expiryDate, quantity, productDetails, price, shopAccountName,shopParty);
         Command command = new Command(new ItemContract.Generate(),shopParty.getOwningKey());
 
         TransactionBuilder txB = new TransactionBuilder(notary)
