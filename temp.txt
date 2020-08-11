@@ -21,3 +21,9 @@ flow start PlaceOrder key: e52232e1-0ded-4587-999f-4dd135a4a94f, buyerAccountNam
 
 RequestDeliver:
 flow start RequestDelivery trackingId: 10d7feaf-52c2-4b00-8053-83463021496f, sender: DemoShop, receiver: Delivery
+
+
+
+################################################################################################################
+TODO: Adding setup steps. Including creating Delivery named account
+TODO: Adding basic running instructions

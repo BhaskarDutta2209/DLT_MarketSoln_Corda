@@ -3,12 +3,14 @@ package com.template.webserver;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import static org.springframework.boot.WebApplicationType.SERVLET;
 
 /**
  * Our Spring Boot application.
  */
+@EnableSwagger2
 @SpringBootApplication
 public class Starter {
     /**
