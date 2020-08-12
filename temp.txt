@@ -27,3 +27,43 @@ flow start RequestDelivery trackingId: 10d7feaf-52c2-4b00-8053-83463021496f, sen
 ################################################################################################################
 TODO: Adding setup steps. Including creating Delivery named account
 TODO: Adding basic running instructions
+
+
+
+
+
+
+
+##################################################################################################################
+Setup Steps:
+
+1. git clone the repository
+2. cd into the repository
+3. ./gradlew clean deployNodes
+
+4. In the Delivery Node:
+   >>>flow start CreateNewAccount accountName: Delivery, shareWith: [Shop,Buyer]
+
+5. ./gradlew runTemplateServer
+
+Running Steps:
+
+1. Initially logged into buyer node
+    a. Create a buyer account
+
+2. Switch to shop node using the switch-party api
+    a. Create a new shop account
+    b. Add some demo products into the inventory
+    c. Check for the product in inventory
+
+3. Switch to buyer node using the switch-party api
+    a. Place order for an item
+
+4. Switch back to Shop node
+    a. View list of all received orders by getorders api
+    b. Accept a particular order
+
+5. Switch to Delivery noed
+    a. Create a demo DeliveryPerson account
+    b. View all the delivery requests by receiveddeliveryrequest api
+    c. Accept a particular delivery

@@ -1,23 +1,25 @@
 package com.template.webserver;
 
-import com.template.flows.AddItem;
-import com.template.flows.CreateNewAccount;
-import com.template.webserver.models.ItemModel;
-import com.template.webserver.models.ShopModel;
+import com.template.flows.*;
+import com.template.states.HandOverRequestState;
+import com.template.states.ItemState;
+import com.template.states.OrderState;
+import com.template.states.RequestDeliveryState;
+import com.template.webserver.models.*;
 import net.corda.core.concurrent.CordaFuture;
+import net.corda.core.contracts.StateAndRef;
+import net.corda.core.contracts.UniqueIdentifier;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.CordaRPCOps;
-import net.corda.core.messaging.FlowHandle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.vault.QueryCriteria;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -56,7 +58,7 @@ public class Controller {
     @Qualifier("buyerProxy")
     private CordaRPCOps proxy;
 
-    @GetMapping(value = "/whoami")
+    @GetMapping(value = "/whoAmI")
     private String whoAmI() {
         return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
     }
@@ -72,8 +74,11 @@ public class Controller {
         return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
     }
 
-    @PostMapping(value = "/createshopaccount")
-    private String createShopAccount(@RequestBody ShopModel body) throws ExecutionException, InterruptedException {
+    @PostMapping(value = "/createShopAccount")
+    private ResponseEntity createShopAccount(@RequestBody ShopModel body) throws ExecutionException, InterruptedException {
+
+        if(!proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop"))
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
         Party delivery = proxy.partiesFromName("Delivery",false).iterator().next();
         Party buyer = proxy.partiesFromName("Buyer",false).iterator().next();
 
@@ -82,12 +87,51 @@ public class Controller {
                 Arrays.asList(delivery,buyer)).getReturnValue();
 
         if(st.get().equalsIgnoreCase("Creation Failed"))
-            return "Creation Failed";
+            return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
         else
-            return "Success";
+            return new ResponseEntity("Success",HttpStatus.OK);
     }
 
-    @PostMapping(value = "/additem")
+
+    @PostMapping(value = "/createUserAccount")
+    private ResponseEntity createUserAccount(@RequestBody UserModel body) throws ExecutionException, InterruptedException {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
+            Party shop = proxy.partiesFromName("Shop",false).iterator().next();
+            Party delivery = proxy.partiesFromName("Delivery",false).iterator().next();
+
+            String res = proxy.startFlowDynamic(CreateNewAccount.class,
+                    body.getUserName(),
+                    Arrays.asList(shop,delivery)).getReturnValue().get();
+
+            if(res.equalsIgnoreCase("Creation Failed"))
+                return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
+            else
+                return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/createDeliveryAccount")
+    private ResponseEntity createDeliveryAccount(@RequestBody DeliveryGuyModel body) throws ExecutionException, InterruptedException {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
+            Party shop = proxy.partiesFromName("Shop",false).iterator().next();
+            Party buyer = proxy.partiesFromName("Buyer",false).iterator().next();
+
+            String res = proxy.startFlowDynamic(CreateNewAccount.class,
+                    body.getDeliveryPersonName(),
+                    Arrays.asList(shop,buyer)).getReturnValue().get();
+
+            if(res.equalsIgnoreCase("Creation Failed"))
+                return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
+            else
+                return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/addItem")
     private ResponseEntity addItem(@RequestBody ItemModel body) {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop")) {
             UUID key = UUID.randomUUID();
@@ -100,6 +144,183 @@ public class Controller {
                     body.getBarCode(),
                     body.getShopAccountName());
             return new ResponseEntity(key.toString(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @GetMapping(value = "/viewInventory/{shopAccountName}")
+    private ResponseEntity viewInventory(@PathVariable String shopAccountName) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop")) {
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+
+            List<StateAndRef<ItemState>> allItemStateAndRefs = proxy.vaultQueryByCriteria(criteria,ItemState.class).getStates();
+
+            List<InventoryModel> inventory = new ArrayList<>();
+
+            allItemStateAndRefs.stream().filter(it -> it.getState().getData().getShopAccountName().equals(shopAccountName)).forEach(
+                    it -> {
+                        QueryCriteria.LinearStateQueryCriteria linearQueryCriteria = new QueryCriteria.LinearStateQueryCriteria(
+                                null,
+                                Collections.singletonList(it.getState().getData().getLinearId()),
+                                Vault.StateStatus.UNCONSUMED,
+                                null
+                        );
+
+                        String timeOfAddition = proxy.vaultQueryByCriteria(linearQueryCriteria,ItemState.class)
+                                .getStatesMetadata().get(0).getRecordedTime().toString();
+
+                        inventory.add(new InventoryModel(
+                                it.getState().getData().getLinearId().getId().toString(),
+                                it.getState().getData().getProductName(),
+                                it.getState().getData().getProductDetails(),
+                                it.getState().getData().getExpiryDate(),
+                                it.getState().getData().getQuantity(),
+                                it.getState().getData().getPrice(),
+                                timeOfAddition
+                                ));
+                    }
+            );
+            return new ResponseEntity(inventory,HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.OK);
+        }
+    }
+
+    @PostMapping(value = "/placeOrder")
+    private ResponseEntity placeOrder(@RequestBody OrderModel body) throws ExecutionException, InterruptedException {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
+
+            String orderId = proxy.startFlowDynamic(PlaceOrder.class,
+                    UUID.fromString(body.getProductKey()),
+                    body.getBuyerAccountName(),
+                    body.getShopAccountName(),
+                    body.getDeliveryAddress()).getReturnValue().get();
+
+            return new ResponseEntity(orderId,HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @GetMapping(value = "/getOrders/{shopAccountName}")
+    private ResponseEntity getOrders(@PathVariable String shopAccountName) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop")) {
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+
+            List<StateAndRef<OrderState>> allOrderStateAndRef = proxy.vaultQueryByCriteria(criteria,OrderState.class).getStates();
+
+            List<ReceivedOrderModel> receivedOrders = new ArrayList<ReceivedOrderModel>();
+
+            allOrderStateAndRef.stream().forEach(it -> {
+                if(it.getState().getData().getShopAccountName().equals(shopAccountName)) {
+                    receivedOrders.add(new ReceivedOrderModel(
+                            it.getState().getData().getLinearId().getId().toString(),
+                            it.getState().getData().getProductKey().toString(),
+                            it.getState().getData().getUserAccountName()
+                    ));
+                } });
+
+            return new ResponseEntity(receivedOrders,HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/requestDelivery")
+    private ResponseEntity acceptOrder(@RequestBody AcceptOrderModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop")) {
+            proxy.startFlowDynamic(RequestDelivery.class,
+                    UUID.fromString(body.getTrackingId()),
+                    body.getShopName(),
+                    "Delivery");
+            return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/acceptDelivery")
+    private ResponseEntity acceptDelivery(@RequestBody AcceptDeliveryModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
+            proxy.startFlowDynamic(AcceptDelivery.class,
+                    UUID.fromString(body.getOrderId()),
+                    body.getBarCode(),
+                    body.getAcceptor(),
+                    body.getShopAccountName());
+
+            return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @GetMapping(value = "/receivedDeliveryRequests")
+    private ResponseEntity receivedDeliveryRequests() {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+
+            List<StateAndRef<RequestDeliveryState>> allRequestDeliveryStateAndRefs = proxy.vaultQueryByCriteria(criteria,RequestDeliveryState.class).getStates();
+
+            List<ReceivedDeliveryRequestModel> receivedDeliveryRequests = new ArrayList<ReceivedDeliveryRequestModel>();
+
+            allRequestDeliveryStateAndRefs.stream().forEach(it ->
+                    receivedDeliveryRequests.add(new ReceivedDeliveryRequestModel(
+                            it.getState().getData().getLinearId().getId().toString(),
+                            it.getState().getData().getShopAccountName(),
+                            it.getState().getData().getBuyerAccountName(),
+                            it.getState().getData().getBuyerAddress()
+                    )));
+
+            return new ResponseEntity(receivedDeliveryRequests,HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @GetMapping(value = "/getLeftHandovers/{deliveryAccountName}")
+    private ResponseEntity getLeftHandovers(@PathVariable String deliveryAccountName) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+
+            List<StateAndRef<HandOverRequestState>> allHandOverRequestStates = proxy.vaultQueryByCriteria(criteria,HandOverRequestState.class).getStates();
+            List<HandoverModel> handoverModels = new ArrayList<HandoverModel>();
+
+            allHandOverRequestStates.stream().forEach(it -> {
+                if(it.getState().getData().getDeliveryGuyAccountName().equals(deliveryAccountName)) {
+                    handoverModels.add(new HandoverModel(
+                            it.getState().getData().getLinearId().getId().toString(),
+                            it.getState().getData().getBuyerAccountName(),
+                            it.getState().getData().getDeliveryAddress()
+                    ));
+                }
+            });
+
+            return new ResponseEntity(handoverModels,HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/handoverItem")
+    private ResponseEntity handoverItem(@RequestBody FinalHandoverModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
+            QueryCriteria.LinearStateQueryCriteria criteria = new QueryCriteria.LinearStateQueryCriteria(
+                    null,
+                    Collections.singletonList(new UniqueIdentifier(null,UUID.fromString(body.getTrackingId()))),
+                    Vault.StateStatus.UNCONSUMED,
+                    null
+            );
+
+            StateAndRef<HandOverRequestState> handOverRequestStateStateAndRef = proxy.vaultQueryByCriteria(criteria,HandOverRequestState.class).getStates().get(0);
+
+            if(handOverRequestStateStateAndRef.getState().getData().getDeliveryGuyAccountName().equalsIgnoreCase(body.getDeliveryAccountName())) {
+                proxy.startFlowDynamic(HandoverItem.class,UUID.fromString(body.getTrackingId()));
+                return new ResponseEntity("Success",HttpStatus.OK);
+            } else {
+                return new ResponseEntity("Wrong Delivery Person",HttpStatus.NOT_ACCEPTABLE);
+            }
+
         } else {
             return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
         }
