@@ -326,4 +326,19 @@ public class Controller {
         }
     }
 
+    @PostMapping(value = "/verifyproduct")
+    private ResponseEntity verifyProduct(@RequestBody VerificationModel body) throws ExecutionException, InterruptedException {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
+
+            String st = proxy.startFlowDynamic(VerifyProduct.class,UUID.fromString(body.getProductKey()),body.getBarCode()).getReturnValue().get();
+
+            if(st.equalsIgnoreCase("Success"))
+                return new ResponseEntity("Success",HttpStatus.OK);
+            else
+                return new ResponseEntity("Failed",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
 }

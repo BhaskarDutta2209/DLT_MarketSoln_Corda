@@ -66,7 +66,7 @@ public class AcceptDelivery extends FlowLogic<String> {
         UUID productKey = requestState.getState().getData().getProductKey();
 
         UniqueIdentifier expectedID = new UniqueIdentifier(barCode,requestState.getState().getData().getUid());
-        if(requestState.getState().getData().getProductId().equals(expectedID)) {
+        if(requestState.getState().getData().getProductId().getExternalId().equals(barCode)) {
 
             AccountInfo deliveryPersonAccountInfo = UtilitiesKt.getAccountService(this).accountInfo(sender).get(0).getState().getData();
             AccountInfo shopAccountInfo = UtilitiesKt.getAccountService(this).accountInfo(receiver).get(0).getState().getData();
@@ -104,10 +104,10 @@ public class AcceptDelivery extends FlowLogic<String> {
             );
             StateAndRef<DeliveryRespondState> deliveryRespondStateStateAndRef = getServiceHub().getVaultService().queryBy(DeliveryRespondState.class,criteria).getStates().get(0);
             subFlow(new ShareStateAndSyncAccounts(deliveryRespondStateStateAndRef,shopAccountInfo.getHost()));
-            return "Success " + stx.toString();
+            return "Success ";
 
         } else {
-            throw new FlowException("ID didn't match");
+            return "Failed";
         }
     }
 }
