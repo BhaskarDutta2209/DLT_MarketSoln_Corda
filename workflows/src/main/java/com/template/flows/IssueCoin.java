@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.r3.corda.lib.accounts.workflows.UtilitiesKt;
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount;
+import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts;
 import com.template.contracts.CoinContract;
 import com.template.states.CoinState;
 import net.corda.core.contracts.Command;
@@ -80,6 +81,12 @@ public class IssueCoin extends FlowLogic<Void> {
                     Arrays.asList(receiverSession), Collections.singleton(senderParty.getOwningKey())));
 
             SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession)));
+
+
+            //Searching the created state and calling ShareStateAndSyncAccounts flow
+
+            StateAndRef<CoinState> coinStateToShare = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates().get(0);
+            subFlow(new ShareStateAndSyncAccounts(coinStateToShare,receiverAccountInfo.getHost()));
 
         } else {
             throw new FlowException("Only Bank can issue Coins");
