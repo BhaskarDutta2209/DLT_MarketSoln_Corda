@@ -112,6 +112,8 @@ public class HandoverItem extends FlowLogic<String> {
 
         SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession)));
 
+        subFlow(new ConfirmDelivered(productKey,inputItem.getState().getData().getShopAccountName(),sender,receiver));
+
         return "Success with Id: " + stx.getId();
     }
 }

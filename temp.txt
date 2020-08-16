@@ -73,3 +73,7 @@ Running Steps:
     a. Create a demo DeliveryPerson account
     b. View all the delivery requests by receiveddeliveryrequest api
     c. Accept a particular delivery
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+1. Buyer Node
+    flow start CreateNewAccount accountName

@@ -1,5 +1,6 @@
 package com.template.states;
 
+import com.template.contracts.DeliveredContract;
 import com.template.contracts.VerificationContract;
 import net.corda.core.contracts.*;
 import net.corda.core.flows.FlowLogicRefFactory;
@@ -16,8 +17,8 @@ import java.util.List;
 // *********
 // * State *
 // *********
-@BelongsToContract(VerificationContract.class)
-public class VerificationState implements SchedulableState, LinearState {
+@BelongsToContract(DeliveredContract.class)
+public class DeliveredState implements SchedulableState, LinearState {
 
     private final UniqueIdentifier linearId;
 
@@ -28,7 +29,7 @@ public class VerificationState implements SchedulableState, LinearState {
 
     private final Instant nextActivityTime;
 
-    public VerificationState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner) {
+    public DeliveredState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner) {
 
         this.linearId = linearId;
         this.shopAccountName = shopAccountName;
@@ -38,7 +39,7 @@ public class VerificationState implements SchedulableState, LinearState {
     }
 
     @ConstructorForDeserialization
-    public VerificationState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner, Instant nextActivityTime) {
+    public DeliveredState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner, Instant nextActivityTime) {
         this.linearId = linearId;
         this.shopAccountName = shopAccountName;
         this.deliveryAccountName = deliveryAccountName;
@@ -55,12 +56,28 @@ public class VerificationState implements SchedulableState, LinearState {
     @Override
     public ScheduledActivity nextScheduledActivity(@NotNull StateRef thisStateRef, @NotNull FlowLogicRefFactory flowLogicRefFactory) {
 
-        return new ScheduledActivity(flowLogicRefFactory.create("com.template.flows.FinalPayment",linearId,shopAccountName,deliveryAccountName),nextActivityTime);
+        return new ScheduledActivity(flowLogicRefFactory.create("com.template.flows.IssueVerificationState",linearId.getId(),"Bank"),nextActivityTime);
     }
 
     @NotNull
     @Override
     public UniqueIdentifier getLinearId() {
         return linearId;
+    }
+
+    public String getShopAccountName() {
+        return shopAccountName;
+    }
+
+    public String getDeliveryAccountName() {
+        return deliveryAccountName;
+    }
+
+    public AnonymousParty getOwner() {
+        return owner;
+    }
+
+    public Instant getNextActivityTime() {
+        return nextActivityTime;
     }
 }

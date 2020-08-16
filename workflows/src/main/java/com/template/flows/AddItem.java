@@ -56,7 +56,7 @@ public class AddItem extends FlowLogic<Void> {
         AnonymousParty shopParty = subFlow(new RequestKeyForAccount(shopAccount));
 
         Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
-        ItemState outputState = new ItemState(linearId,productId,productName, expiryDate, quantity, productDetails, price, shopAccountName,shopParty);
+        ItemState outputState = new ItemState(linearId,productId,productName, expiryDate, quantity, productDetails, price, shopAccountName, shopParty);
         Command command = new Command(new ItemContract.Generate(),shopParty.getOwningKey());
 
         TransactionBuilder txB = new TransactionBuilder(notary)

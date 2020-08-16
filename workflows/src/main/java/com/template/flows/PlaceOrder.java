@@ -90,7 +90,7 @@ public class PlaceOrder extends FlowLogic<String> {
         List<StateAndRef<OrderState>> orderStates = getServiceHub().getVaultService().queryBy(OrderState.class,criteria).getStates();
         subFlow(new ShareStateAndSyncAccounts(orderStates.get(0),shopAccountInfo.getHost()));
 
-        subFlow(new MakePayment(orderId.getId(),buyerAccountName,"Bank",amtToShop,amtToDelivery));
+        subFlow(new MakePayment(key,buyerAccountName,"Bank",amtToShop,amtToDelivery));
 
         return orderId.getId().toString();
     }

@@ -43,8 +43,11 @@ public class VerifyProduct extends FlowLogic<String> {
 
         StateAndRef<ItemState> itemStateStateAndRef = getServiceHub().getVaultService().queryBy(ItemState.class,criteria).getStates().get(0);
 
-        if(itemStateStateAndRef.getState().getData().getProductId().getExternalId().equals(barCode))
+        if(itemStateStateAndRef.getState().getData().getProductId().getExternalId().equals(barCode)) {
+            subFlow(new IssueVerificationState(productKey,"Bank"));
             return "Success";
+        }
+//            return "Success";
         else
             return "Failed";
     }
