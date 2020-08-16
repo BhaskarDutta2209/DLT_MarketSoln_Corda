@@ -71,8 +71,8 @@ public class NodeRPCConnection implements WebMvcConfigurer {
     @Value("${delivery.host}")
     private String deliveryHostAndPort;
 
-//    @Value("${bank.host}")
-//    private String bankHostAndPort;
+   @Value("${bank.host}")
+   private String bankHostAndPort;
 
     @Value("${shop.host}")
     private String shopHostAndPort;
@@ -89,11 +89,11 @@ public class NodeRPCConnection implements WebMvcConfigurer {
         return deliveryClient.start("user1","test").getProxy();
     }
 
-//    @Bean(destroyMethod = "")
-//    public CordaRPCOps bankProxy() {
-//        CordaRPCClient bankClient = new CordaRPCClient(NetworkHostAndPort.parse(bankHostAndPort));
-//        return bankClient.start("user1","test").getProxy();
-//    }
+   @Bean(destroyMethod = "")
+   public CordaRPCOps bankProxy() {
+       CordaRPCClient bankClient = new CordaRPCClient(NetworkHostAndPort.parse(bankHostAndPort));
+       return bankClient.start("user1","test").getProxy();
+   }
 
     @Bean(destroyMethod = "")
     public CordaRPCOps shopProxy() {

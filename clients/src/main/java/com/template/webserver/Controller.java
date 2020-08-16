@@ -48,8 +48,8 @@ public class Controller {
     @Autowired
     private CordaRPCOps deliveryProxy;
 
-//    @Autowired
-//    private CordaRPCOps bankProxy;
+   @Autowired
+   private CordaRPCOps bankProxy;
 
     @Autowired
     private CordaRPCOps shopProxy;
@@ -71,6 +71,8 @@ public class Controller {
             proxy = deliveryProxy;
         else if(party.equalsIgnoreCase("buyer"))
             proxy = buyerProxy;
+        else if(party.equalsIgnoreCase("bank"))
+            proxy = bankProxy;
         return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
     }
 
@@ -81,10 +83,11 @@ public class Controller {
             return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
         Party delivery = proxy.partiesFromName("Delivery",false).iterator().next();
         Party buyer = proxy.partiesFromName("Buyer",false).iterator().next();
+        Party bank = proxy.partiesFromName("Bank",false).iterator().next();
 
         CordaFuture<String> st = proxy.startFlowDynamic(CreateNewAccount.class,
                 body.getShopName(),
-                Arrays.asList(delivery,buyer)).getReturnValue();
+                Arrays.asList(delivery,buyer,bank)).getReturnValue();
 
         if(st.get().equalsIgnoreCase("Creation Failed"))
             return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
@@ -98,10 +101,11 @@ public class Controller {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
             Party shop = proxy.partiesFromName("Shop",false).iterator().next();
             Party delivery = proxy.partiesFromName("Delivery",false).iterator().next();
+            Party bank = proxy.partiesFromName("Bank",false).iterator().next();
 
             String res = proxy.startFlowDynamic(CreateNewAccount.class,
                     body.getUserName(),
-                    Arrays.asList(shop,delivery)).getReturnValue().get();
+                    Arrays.asList(shop,delivery,bank)).getReturnValue().get();
 
             if(res.equalsIgnoreCase("Creation Failed"))
                 return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
@@ -117,10 +121,11 @@ public class Controller {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
             Party shop = proxy.partiesFromName("Shop",false).iterator().next();
             Party buyer = proxy.partiesFromName("Buyer",false).iterator().next();
+            Party bank = proxy.partiesFromName("Bank",false).iterator().next();
 
             String res = proxy.startFlowDynamic(CreateNewAccount.class,
                     body.getDeliveryPersonName(),
-                    Arrays.asList(shop,buyer)).getReturnValue().get();
+                    Arrays.asList(shop,buyer,bank)).getReturnValue().get();
 
             if(res.equalsIgnoreCase("Creation Failed"))
                 return new ResponseEntity(null,HttpStatus.BAD_REQUEST);
@@ -195,7 +200,9 @@ public class Controller {
                     UUID.fromString(body.getProductKey()),
                     body.getBuyerAccountName(),
                     body.getShopAccountName(),
-                    body.getDeliveryAddress()).getReturnValue().get();
+                    body.getDeliveryAddress(),
+                    body.getAmtToShop(),
+                    body.getAmtToDelivery()).getReturnValue().get();
 
             return new ResponseEntity(orderId,HttpStatus.OK);
         } else {
@@ -336,6 +343,22 @@ public class Controller {
                 return new ResponseEntity("Success",HttpStatus.OK);
             else
                 return new ResponseEntity("Failed",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @GetMapping(value = "/getBalance/{accountName}")
+    private String getBalance(@PathVariable String accountName) throws ExecutionException, InterruptedException {
+        String st = proxy.startFlowDynamic(GetBalance.class,accountName).getReturnValue().get();
+        return st;
+    }
+
+    @PostMapping(value = "/issuecoin/")
+    private ResponseEntity issueCoin(@RequestBody IssueCoinModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Bank")) {
+            proxy.startFlowDynamic(IssueCoin.class,"Bank",body.getAccountName(),body.getValue());
+            return new ResponseEntity("Success",HttpStatus.OK);
         } else {
             return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
         }

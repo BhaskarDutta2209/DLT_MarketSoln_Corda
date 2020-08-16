@@ -19,7 +19,6 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.text.Utilities;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,12 +35,16 @@ public class PlaceOrder extends FlowLogic<String> {
     private final String buyerAccountName;
     private final String shopAccountName;
     private final String deliveryAddress;
+    private final double amtToShop;
+    private final double amtToDelivery;
 
-    public PlaceOrder(UUID key, String buyerAccountName, String shopAccountName, String deliveryAddress) {
+    public PlaceOrder(UUID key, String buyerAccountName, String shopAccountName, String deliveryAddress, double amtToShop, double amtToDelivery) {
         this.key = key;
         this.buyerAccountName = buyerAccountName;
         this.shopAccountName = shopAccountName;
         this.deliveryAddress = deliveryAddress;
+        this.amtToShop = amtToShop;
+        this.amtToDelivery = amtToDelivery;
     }
 
     @Suspendable
@@ -86,6 +89,8 @@ public class PlaceOrder extends FlowLogic<String> {
         );
         List<StateAndRef<OrderState>> orderStates = getServiceHub().getVaultService().queryBy(OrderState.class,criteria).getStates();
         subFlow(new ShareStateAndSyncAccounts(orderStates.get(0),shopAccountInfo.getHost()));
+
+        subFlow(new MakePayment(orderId.getId(),buyerAccountName,"Bank",amtToShop,amtToDelivery));
 
         return orderId.getId().toString();
     }
