@@ -27,6 +27,7 @@ import java.util.UUID;
 // ******************
 @InitiatingFlow
 @StartableByRPC
+@SchedulableFlow
 public class IssueCoin extends FlowLogic<Void> {
 
     private final String sender;
