@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.r3.corda.lib.accounts.workflows.UtilitiesKt;
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount;
+import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts;
 import com.template.contracts.CoinContract;
 import com.template.contracts.PaymentContract;
 import com.template.states.CoinState;
@@ -14,6 +15,7 @@ import net.corda.core.contracts.UniqueIdentifier;
 import net.corda.core.flows.*;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
+import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.vault.QueryCriteria;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -80,7 +82,7 @@ public class MakePayment extends FlowLogic<String> {
             Command paymentCommand = new Command(new PaymentContract.Issue(), Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
             Command coinCommand = new Command(new CoinContract.Consume(),Arrays.asList(receiverParty.getOwningKey(),senderParty.getOwningKey()));
 
-            PaymentState outputPaymentState = new PaymentState(new UniqueIdentifier(null,linearId),amtToShop,amtToDelivery,senderParty,receiverParty);
+            PaymentState outputPaymentState = new PaymentState(new UniqueIdentifier(null,linearId),amtToShop,amtToDelivery, accountName, senderParty,receiverParty);
             CoinState outputCoinState = new CoinState(availableBalance - totalCost,bankAccountName,receiverParty,accountName,senderParty);
 
             TransactionBuilder txB = new TransactionBuilder(notary)
@@ -95,7 +97,15 @@ public class MakePayment extends FlowLogic<String> {
                     Arrays.asList(receiverSession), Collections.singleton(senderParty.getOwningKey())));
 
             SignedTransaction stx = subFlow(new FinalityFlow(fullySignedTx,Arrays.asList(receiverSession)));
+
+            //Searching the created state and calling ShareStateAndSync method
+            QueryCriteria.VaultQueryCriteria coinSearchCriteria = new QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+            StateAndRef<CoinState> coinStateToShare = getServiceHub().getVaultService().queryBy(CoinState.class,coinSearchCriteria).getStates().get(0);
+
+            subFlow(new ShareStateAndSyncAccounts(coinStateToShare,receiverAccountInfo.getHost()));
+
             return stx.getId().toString();
+
         }
     }
 }

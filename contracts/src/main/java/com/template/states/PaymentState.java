@@ -1,7 +1,6 @@
 package com.template.states;
 
 import com.template.contracts.PaymentContract;
-import com.template.contracts.TemplateContract;
 import net.corda.core.contracts.BelongsToContract;
 import net.corda.core.contracts.LinearState;
 import net.corda.core.contracts.UniqueIdentifier;
@@ -22,13 +21,15 @@ public class PaymentState implements LinearState {
     private final double amtToShop;
     private final double amtToDelivery;
 
+    private final String senderAccountName;
     private final AnonymousParty issuer;
     private final AnonymousParty owner;
 
-    public PaymentState(UniqueIdentifier linearId, double amtToShop, double amtToDelivery, AnonymousParty issuer, AnonymousParty owner) {
+    public PaymentState(UniqueIdentifier linearId, double amtToShop, double amtToDelivery, String senderAccountName, AnonymousParty issuer, AnonymousParty owner) {
         this.linearId = linearId;
         this.amtToShop = amtToShop;
         this.amtToDelivery = amtToDelivery;
+        this.senderAccountName = senderAccountName;
         this.issuer = issuer;
 
         this.owner = owner;
@@ -51,6 +52,10 @@ public class PaymentState implements LinearState {
 
     public double getAmtToDelivery() {
         return amtToDelivery;
+    }
+
+    public String getSenderAccountName() {
+        return senderAccountName;
     }
 
     public AnonymousParty getIssuer() {

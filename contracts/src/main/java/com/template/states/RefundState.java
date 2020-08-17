@@ -1,6 +1,6 @@
 package com.template.states;
 
-import com.template.contracts.VerificationContract;
+import com.template.contracts.RefundContract;
 import net.corda.core.contracts.*;
 import net.corda.core.flows.FlowLogicRefFactory;
 import net.corda.core.identity.AbstractParty;
@@ -16,32 +16,24 @@ import java.util.List;
 // *********
 // * State *
 // *********
-@BelongsToContract(VerificationContract.class)
-public class VerificationState implements SchedulableState, LinearState {
+@BelongsToContract(RefundContract.class)
+public class RefundState implements SchedulableState, LinearState {
 
     private final UniqueIdentifier linearId;
-
-    private final String shopAccountName;
-    private final String deliveryAccountName;
-
     private final AnonymousParty owner;
 
     private final Instant nextActivityTime;
 
-    public VerificationState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner) {
-
+    public RefundState(UniqueIdentifier linearId, AnonymousParty owner) {
         this.linearId = linearId;
-        this.shopAccountName = shopAccountName;
-        this.deliveryAccountName = deliveryAccountName;
         this.owner = owner;
-        this.nextActivityTime = Instant.now().plusSeconds(10);
+        this.nextActivityTime = Instant.now().plusSeconds(5);
     }
 
     @ConstructorForDeserialization
-    public VerificationState(UniqueIdentifier linearId, String shopAccountName, String deliveryAccountName, AnonymousParty owner, Instant nextActivityTime) {
+    public RefundState(UniqueIdentifier linearId, AnonymousParty owner, Instant nextActivityTime) {
+
         this.linearId = linearId;
-        this.shopAccountName = shopAccountName;
-        this.deliveryAccountName = deliveryAccountName;
         this.owner = owner;
         this.nextActivityTime = nextActivityTime;
     }
@@ -54,13 +46,16 @@ public class VerificationState implements SchedulableState, LinearState {
     @Nullable
     @Override
     public ScheduledActivity nextScheduledActivity(@NotNull StateRef thisStateRef, @NotNull FlowLogicRefFactory flowLogicRefFactory) {
-
-        return new ScheduledActivity(flowLogicRefFactory.create("com.template.flows.FinalPayment",linearId,shopAccountName,deliveryAccountName),nextActivityTime);
+        return new ScheduledActivity(flowLogicRefFactory.create("com.template.flows.Refund",linearId),nextActivityTime);
     }
 
     @NotNull
     @Override
     public UniqueIdentifier getLinearId() {
         return linearId;
+    }
+
+    public AnonymousParty getOwner() {
+        return owner;
     }
 }

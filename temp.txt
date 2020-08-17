@@ -30,6 +30,8 @@ BuyerNode:
 flow start MakePayment linearId: e52232e1-0ded-4587-999f-4dd135a4a94f, accountName: Bhaskar, bankAccountName: Bank, amtToShop: 50, amtToDelivery: 25
 
 
+flow start CreateNewAccount accountNa
+
 ################################################################################################################
 TODO: Adding setup steps. Including creating Delivery named account
 TODO: Adding basic running instructions
@@ -75,5 +77,8 @@ Running Steps:
     c. Accept a particular delivery
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-1. Buyer Node
-    flow start CreateNewAccount accountName
+1. Delivery Node
+    flow start CreateNewAccount accountName: Delivery, shareWith: [Bank,Buyer,Shop]
+
+2. Bank Node
+    flow start CreateNewAccount accountName: Bank, shareWith: [Shop,Buyer,Delivery]

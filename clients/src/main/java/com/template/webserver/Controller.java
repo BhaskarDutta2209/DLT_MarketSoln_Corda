@@ -248,15 +248,18 @@ public class Controller {
     }
 
     @PostMapping(value = "/acceptDelivery")
-    private ResponseEntity acceptDelivery(@RequestBody AcceptDeliveryModel body) {
+    private ResponseEntity acceptDelivery(@RequestBody AcceptDeliveryModel body) throws ExecutionException, InterruptedException {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Delivery")) {
-            proxy.startFlowDynamic(AcceptDelivery.class,
+            String st = proxy.startFlowDynamic(AcceptDelivery.class,
                     UUID.fromString(body.getOrderId()),
                     body.getBarCode(),
                     body.getAcceptor(),
-                    body.getShopAccountName());
+                    body.getShopAccountName()).getReturnValue().get();
 
-            return new ResponseEntity("Success",HttpStatus.OK);
+            if (st.equalsIgnoreCase("Success"))
+                return new ResponseEntity("Success",HttpStatus.OK);
+            else
+                return new ResponseEntity("Wrong Bar Code",HttpStatus.NOT_ACCEPTABLE);
         } else {
             return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
         }

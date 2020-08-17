@@ -58,8 +58,9 @@ public class IssueCoin extends FlowLogic<Void> {
 
             Command command = new Command(new CoinContract.Issue(),Arrays.asList(senderParty.getOwningKey(),receiverParty.getOwningKey()));
 
-            UUID id = receiverAccountInfo.getIdentifier().getId();
-            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria().withExternalIds(Arrays.asList(id));
+            UUID id1 = receiverAccountInfo.getIdentifier().getId();
+            UUID id2 = senderAccountInfo.getIdentifier().getId();
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria().withExternalIds(Arrays.asList(id1,id2));
 
             List<StateAndRef<CoinState>> coinStates = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates();
 
