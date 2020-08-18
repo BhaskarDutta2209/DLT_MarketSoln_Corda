@@ -17,10 +17,7 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 // ******************
 // * Initiator flow *
@@ -60,10 +57,14 @@ public class IssueCoin extends FlowLogic<Void> {
 
             UUID id1 = receiverAccountInfo.getIdentifier().getId();
             UUID id2 = senderAccountInfo.getIdentifier().getId();
-            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria().withExternalIds(Arrays.asList(id1,id2));
+            QueryCriteria.VaultQueryCriteria criteria = new QueryCriteria.VaultQueryCriteria().withExternalIds(Arrays.asList(id1,id2)); //Find state which have either of sender or receiver as it's external id
 
-            List<StateAndRef<CoinState>> coinStates = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates();
-
+            List<StateAndRef<CoinState>> allCoinStates = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates();
+            List<StateAndRef<CoinState>> coinStates = new ArrayList<>();
+            allCoinStates.forEach(it -> {
+                if(it.getState().getData().getReceiverAccount().equals(receiver))
+                    coinStates.add(it);
+            });
 
             TransactionBuilder txB = new TransactionBuilder(notary)
                     .addCommand(command);

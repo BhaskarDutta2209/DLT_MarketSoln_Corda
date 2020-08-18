@@ -30,7 +30,7 @@ public class IssueRefundState extends FlowLogic<Void> {
     private final String receiver;
     private final String sender;
 
-    public IssueRefundState(UUID productKey, String receiver, String sender) {
+    public IssueRefundState(UUID productKey, String sender, String receiver) {
         this.productKey = productKey;
         this.receiver = receiver;
         this.sender = sender;

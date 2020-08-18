@@ -104,7 +104,7 @@ public class AcceptDelivery extends FlowLogic<String> {
             );
             StateAndRef<DeliveryRespondState> deliveryRespondStateStateAndRef = getServiceHub().getVaultService().queryBy(DeliveryRespondState.class,criteria).getStates().get(0);
             subFlow(new ShareStateAndSyncAccounts(deliveryRespondStateStateAndRef,shopAccountInfo.getHost()));
-            return "Success ";
+            return "Success";
 
         } else {
             return "Failed";

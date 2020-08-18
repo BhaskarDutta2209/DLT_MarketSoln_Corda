@@ -46,9 +46,8 @@ public class VerifyProduct extends FlowLogic<String> {
         if(itemStateStateAndRef.getState().getData().getProductId().getExternalId().equals(barCode)) {
             subFlow(new IssueVerificationState(productKey,"Bank"));
             return "Success";
+        } else {
+         return "Failed";
         }
-//            return "Success";
-        else
-            return "Failed";
     }
 }

@@ -336,7 +336,7 @@ public class Controller {
         }
     }
 
-    @PostMapping(value = "/verifyproduct")
+    @PostMapping(value = "/verifyProduct")
     private ResponseEntity verifyProduct(@RequestBody VerificationModel body) throws ExecutionException, InterruptedException {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
 
@@ -357,10 +357,30 @@ public class Controller {
         return st;
     }
 
-    @PostMapping(value = "/issuecoin/")
+    @PostMapping(value = "/issueCoin/")
     private ResponseEntity issueCoin(@RequestBody IssueCoinModel body) {
         if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Bank")) {
             proxy.startFlowDynamic(IssueCoin.class,"Bank",body.getAccountName(),body.getValue());
+            return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/rejectOrder")
+    private ResponseEntity rejectOrder(@RequestBody RejectOrderModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Shop")) {
+            proxy.startFlowDynamic(IssueRefundState.class,UUID.fromString(body.getProductKey()),body.getAccountName(),"Bank");
+            return new ResponseEntity("Success",HttpStatus.OK);
+        } else {
+            return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    @PostMapping(value = "/requestRefund")
+    private ResponseEntity requestRefund(@RequestBody RejectOrderModel body) {
+        if(proxy.nodeInfo().getLegalIdentities().get(0).getName().getOrganisation().equalsIgnoreCase("Buyer")) {
+            proxy.startFlowDynamic(IssueRefundState.class,UUID.fromString(body.getProductKey()),body.getAccountName(),"Bank");
             return new ResponseEntity("Success",HttpStatus.OK);
         } else {
             return new ResponseEntity(null,HttpStatus.NOT_ACCEPTABLE);
