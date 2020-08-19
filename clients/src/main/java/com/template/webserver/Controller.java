@@ -13,6 +13,8 @@ import net.corda.core.identity.Party;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.vault.QueryCriteria;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -30,51 +32,56 @@ import java.util.concurrent.ExecutionException;
 @RequestMapping("/") // The paths for HTTP requests are relative to this base path.
 public class Controller {
 
-//    private final CordaRPCOps proxy;
-//    private final static Logger logger = LoggerFactory.getLogger(Controller.class);
+    private final CordaRPCOps proxy;
+    private final static Logger logger = LoggerFactory.getLogger(Controller.class);
+
+    public Controller(NodeRPCConnection rpc) {
+        this.proxy = rpc.proxy;
+    }
+
+    @GetMapping(value = "/templateendpoint", produces = "text/plain")
+    private String templateendpoint() {
+        return "Define an endpoint here.";
+    }
+
+    //////////////////////////////////////////////////
+
+//    @Autowired
+//    private CordaRPCOps buyerProxy;
 //
-//    public Controller(NodeRPCConnection rpc) {
-//        this.proxy = rpc.proxy;
-//    }
+//    @Autowired
+//    private CordaRPCOps deliveryProxy;
 //
-//    @GetMapping(value = "/templateendpoint", produces = "text/plain")
-//    private String templateendpoint() {
-//        return "Define an endpoint here.";
+//   @Autowired
+//   private CordaRPCOps bankProxy;
+//
+//    @Autowired
+//    private CordaRPCOps shopProxy;
+//
+//    @Autowired
+//    @Qualifier("buyerProxy")
+//    private CordaRPCOps proxy;
+
+//    @PostMapping(value = "/switch-party/{party}")
+//    private String switchParty(@PathVariable String party) {
+//        if(party.equalsIgnoreCase("shop"))
+//            proxy = shopProxy;
+//        else if(party.equalsIgnoreCase("delivery"))
+//            proxy = deliveryProxy;
+//        else if(party.equalsIgnoreCase("buyer"))
+//            proxy = buyerProxy;
+//        else if(party.equalsIgnoreCase("bank"))
+//            proxy = bankProxy;
+//        return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
 //    }
 
-    @Autowired
-    private CordaRPCOps buyerProxy;
-
-    @Autowired
-    private CordaRPCOps deliveryProxy;
-
-   @Autowired
-   private CordaRPCOps bankProxy;
-
-    @Autowired
-    private CordaRPCOps shopProxy;
-
-    @Autowired
-    @Qualifier("buyerProxy")
-    private CordaRPCOps proxy;
+    /////////////////////////////////////////////////////
 
     @GetMapping(value = "/whoAmI")
     private String whoAmI() {
         return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
     }
 
-    @PostMapping(value = "/switch-party/{party}")
-    private String switchParty(@PathVariable String party) {
-        if(party.equalsIgnoreCase("shop"))
-            proxy = shopProxy;
-        else if(party.equalsIgnoreCase("delivery"))
-            proxy = deliveryProxy;
-        else if(party.equalsIgnoreCase("buyer"))
-            proxy = buyerProxy;
-        else if(party.equalsIgnoreCase("bank"))
-            proxy = bankProxy;
-        return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
-    }
 
     @PostMapping(value = "/createShopAccount")
     private ResponseEntity createShopAccount(@RequestBody ShopModel body) throws ExecutionException, InterruptedException {
