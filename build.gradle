@@ -261,16 +261,16 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) 
         sshdPort 2224
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
     }
-//    node {
-//        name "O=Bank,L=Kolkata,C=IN"
-//        p2pPort 10011
-//        rpcSettings {
-//            address("localhost:10012")
-//            adminAddress("localhost:10052")
-//        }
-//        sshdPort 2225
-//        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
-//    }
+   node {
+       name "O=Bank,L=Kolkata,C=IN"
+       p2pPort 10011
+       rpcSettings {
+           address("localhost:10012")
+           adminAddress("localhost:10052")
+       }
+       sshdPort 2225
+       rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+   }
     node {
         name "O=Shop,L=Kolkata,C=IN"
         p2pPort 10014
