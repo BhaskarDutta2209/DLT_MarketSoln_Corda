@@ -19,4 +19,10 @@
 </ul>
 
 <h3>Starting the server</h3>
-<p>The framework have integrated <strong>Spring Boot Framework</strong>. To start the server type<code>./gradlew runTemplateServer</code></p>
+<p>The framework have integrated <strong>Spring Boot Framework</strong>. To start the server type</p>
+<ul>
+<li><code>./gradlew runBuyerServer</code></li>
+<li><code>./gradlew runDeliveryServer</code></li>
+<li><code>./gradlew runBankServer</code></li>
+<li><code>./gradlew runShopServer</code></li>
+</ul>
