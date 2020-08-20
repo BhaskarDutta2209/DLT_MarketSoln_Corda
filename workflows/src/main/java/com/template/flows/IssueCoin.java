@@ -88,8 +88,14 @@ public class IssueCoin extends FlowLogic<Void> {
 
             //Searching the created state and calling ShareStateAndSyncAccounts flow
 
-            StateAndRef<CoinState> coinStateToShare = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates().get(0);
-            subFlow(new ShareStateAndSyncAccounts(coinStateToShare,receiverAccountInfo.getHost()));
+            List<StateAndRef<CoinState>> allCoinStateToShare = getServiceHub().getVaultService().queryBy(CoinState.class,criteria).getStates();
+            List<StateAndRef<CoinState>> coinStatesToShare = new ArrayList<>();
+            allCoinStateToShare.forEach(it -> {
+                if(it.getState().getData().getReceiverAccount().equals(receiver))
+                    coinStatesToShare.add(it);
+            });
+//            subFlow(new ShareStateAndSyncAccounts(coinStateToShare,receiverAccountInfo.getHost()));
+            subFlow(new ShareStateAndSyncAccounts(coinStatesToShare.get(0),receiverAccountInfo.getHost()));
 
         } else {
             throw new FlowException("Only Bank can issue Coins");
