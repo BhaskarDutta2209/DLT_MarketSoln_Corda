@@ -26,3 +26,13 @@
 <li><code>./gradlew runBankServer</code></li>
 <li><code>./gradlew runShopServer</code></li>
 </ul>
+
+<h3>Demo</h3>
+<p>The demo apis are available at below url. The cordaaps are hosted in GCP</p>
+<ul>
+<li>User Server: <code>http://34.71.53.216:10050/swagger-ui.html</code></li>
+<li>Delivery Server: <code>http://34.71.53.216:10060/swagger-ui.html</code></li>
+<li>Bank Server: <code>http://34.71.53.216:10070/swagger-ui.html</code></li>
+<li>Shop Server: <code>http://34.71.53.216:10080/swagger-ui.html</code></li>
+</ul>
+<p>If the url isn't opening then it means the VMs have been discontinued.</p>
