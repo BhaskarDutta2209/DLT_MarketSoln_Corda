@@ -6,6 +6,8 @@ import com.template.states.ItemState;
 import com.template.states.OrderState;
 import com.template.states.RequestDeliveryState;
 import com.template.webserver.models.*;
+import com.template.webserver.security.JwtUtils;
+import com.template.webserver.security.MyUserDetailsService;
 import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.contracts.UniqueIdentifier;
@@ -19,6 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -37,11 +42,6 @@ public class Controller {
 
     public Controller(NodeRPCConnection rpc) {
         this.proxy = rpc.proxy;
-    }
-
-    @GetMapping(value = "/templateendpoint", produces = "text/plain")
-    private String templateendpoint() {
-        return "Define an endpoint here.";
     }
 
     //////////////////////////////////////////////////
@@ -76,6 +76,34 @@ public class Controller {
 //    }
 
     /////////////////////////////////////////////////////
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private MyUserDetailsService userDetailsService;
+
+    @Autowired
+    private JwtUtils jwtTokenUtil;
+
+    //Create Authenticate API
+    @PostMapping(value = "/authenticate")
+    private ResponseEntity createAuthenticationToken(@RequestBody AuthRequestModel body)throws Exception {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(body.getUsername(),body.getPassword())
+            );
+        } catch (Exception exp) {
+            throw new Exception("Incorrect username or password");
+        }
+
+        final UserDetails userDetails = userDetailsService
+                .loadUserByUsername(body.getUsername());
+
+        final String jwt = jwtTokenUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(new AuthResponseModel(jwt));
+    }
 
     @GetMapping(value = "/whoAmI")
     private String whoAmI() {

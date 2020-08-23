@@ -9,3 +9,5 @@ bank:
 
 shop:
   host: localhost:10015
+
+jwt.secret: test123
