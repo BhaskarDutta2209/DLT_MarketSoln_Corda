@@ -1,5 +1,6 @@
 package com.template.webserver;
 
+import com.r3.corda.lib.accounts.contracts.states.AccountInfo;
 import com.template.flows.*;
 import com.template.states.HandOverRequestState;
 import com.template.states.ItemState;
@@ -18,16 +19,17 @@ import net.corda.core.node.services.vault.QueryCriteria;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Define your API endpoints here.
@@ -110,6 +112,17 @@ public class Controller {
         return proxy.nodeInfo().getLegalIdentities().get(0).getName().toString();
     }
 
+    @PostMapping(value = "/checkUser")
+    private ResponseEntity checkUser(@RequestBody UserModel body) {
+        List<StateAndRef<AccountInfo>> accountInfos = proxy.vaultQuery(AccountInfo.class).getStates();
+
+        for(StateAndRef<AccountInfo> accountInfo : accountInfos) {
+            if(accountInfo.getState().getData().getName().equals(body.getUserName())) {
+                return ResponseEntity.ok(jwtTokenUtil.generateToken(new User(body.getUserName(),"",Arrays.asList())));
+            }
+        }
+        return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
+    }
 
     @PostMapping(value = "/createShopAccount")
     private ResponseEntity createShopAccount(@RequestBody ShopModel body) throws ExecutionException, InterruptedException {

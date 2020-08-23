@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class UserModel {
     private final String userName;
 
-    public UserModel(@JsonProperty("userName") String shopName) {
-        this.userName = shopName;
+    public UserModel(@JsonProperty("userName") String userName) {
+        this.userName = userName;
     }
 
     public String getUserName() {
