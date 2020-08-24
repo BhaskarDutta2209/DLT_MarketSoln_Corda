@@ -4,19 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AuthRequestModel {
     private final String username;
-    private final String password;
 
-    public AuthRequestModel(@JsonProperty("username") String username,
-                            @JsonProperty("password") String password) {
+    public AuthRequestModel(@JsonProperty("username") String username) {
         this.username = username;
-        this.password = password;
     }
 
     public String getUsername() {
         return username;
-    }
-
-    public String getPassword() {
-        return password;
     }
 }

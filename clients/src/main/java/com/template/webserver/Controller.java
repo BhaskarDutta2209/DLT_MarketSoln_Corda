@@ -92,19 +92,47 @@ public class Controller {
     @PostMapping(value = "/authenticate")
     private ResponseEntity createAuthenticationToken(@RequestBody AuthRequestModel body)throws Exception {
         try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(body.getUsername(),body.getPassword())
-            );
+//            authenticationManager.authenticate(
+//                    new UsernamePasswordAuthenticationToken(body.getUsername(),body.getPassword())
+
+            String username = body.getUsername();
+            System.out.println(username);
+            List<StateAndRef<AccountInfo>> accountInfos = proxy.vaultQuery(AccountInfo.class).getStates();
+            boolean found = false;
+            for(StateAndRef<AccountInfo> accountInfo : accountInfos) {
+                if(accountInfo.getState().getData().getName().equals(username)) {
+                    //
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) {
+                return new ResponseEntity("User Not Found !!!",HttpStatus.OK);
+            } else {
+                final UserDetails userDetails = userDetailsService
+                        .loadUserByUsername(body.getUsername());
+
+                final String jwt = jwtTokenUtil.generateToken(userDetails);
+
+                return ResponseEntity.ok(new AuthResponseModel(jwt));
+            }
         } catch (Exception exp) {
             throw new Exception("Incorrect username or password");
         }
 
-        final UserDetails userDetails = userDetailsService
-                .loadUserByUsername(body.getUsername());
+    }
 
-        final String jwt = jwtTokenUtil.generateToken(userDetails);
-
-        return ResponseEntity.ok(new AuthResponseModel(jwt));
+    public boolean checkExistance(String userName) {
+        List<StateAndRef<AccountInfo>> accountInfos = proxy.vaultQuery(AccountInfo.class).getStates();
+        boolean found = false;
+        for(StateAndRef<AccountInfo> accountInfo : accountInfos) {
+            if(accountInfo.getState().getData().getName().equals(userName)) {
+                //
+                found = true;
+                break;
+            }
+        }
+        return found;
     }
 
     @GetMapping(value = "/whoAmI")
